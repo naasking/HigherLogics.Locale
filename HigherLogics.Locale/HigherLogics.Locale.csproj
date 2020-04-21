@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="system.Memory" Version="4.5.4" />
     <PackageReference Include="system.valuetuple" Version="4.5.0" />
   </ItemGroup>
 

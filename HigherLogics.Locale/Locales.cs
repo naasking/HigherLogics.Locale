@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Text;
 using System.Linq;
 using System.Collections.Generic;
+using C = HigherLogics.Locale.Country;
 
 namespace HigherLogics.Locale
 {
@@ -9,6 +11,7 @@ namespace HigherLogics.Locale
     /// </summary>
     public static partial class Locales
     {
+        #region Useful lookups
         /// <summary>
         /// Look up a country's states.
         /// </summary>
@@ -43,5 +46,224 @@ namespace HigherLogics.Locale
             country2Currency.TryGetValue(country, out var c)
             ? c
             : new Currency?();
+        #endregion
+
+        #region PostalAddress parsing
+        public static PostalAddress ParseAddress(string address)
+        {
+            var words = NewLines(address.Split(nl, StringSplitOptions.RemoveEmptyEntries))
+                          .SelectMany(x => x.Split(sp, StringSplitOptions.RemoveEmptyEntries))
+                          .ToList();
+            var countries = ParseCountries(words);
+            // country is optional, so also search by state first and return all countries that match
+            var shipTo = countries.SelectMany(x => ParseProvincesGivenCountry(x))
+                                  .Concat(ParseProvinces(words))
+                                  .ToList();
+            var best = PickBest(shipTo);
+            return new PostalAddress
+            {
+                StreetAddress = best.Address,
+                Country = best.Country.Value,
+                State = best.State,
+                Municipality = best.City,
+                PostalCode = best.PostalCode,
+            };
+        }
+
+        //FIXME: I should add better scoring, where I consider the case sensitivity of various identifiers.
+        //Perhaps case insensitivity is a fallback, and everything should be case sensitive by default.
+
+        static char[] nl = new[] { '\r', '\n' };
+        static char[] sp = new[] { ' ', ',' };
+        static string[] countryNames = Enum.GetNames(typeof(Country)).OrderBy(x => x).ToArray();
+
+        static IEnumerable<string> NewLines(string[] lines)
+        {
+            for (int i = 0; i < lines.Length; ++i)
+            {
+                yield return lines[i];
+                yield return "\r\n";
+            }
+        }
+
+        public class PartialAddress : IComparable<PartialAddress>
+        {
+            public string Address;
+            public string City;
+            public string State;
+            public Country? Country;
+            public string PostalCode;
+            public int LastIndex;
+            public string CountryCode;
+            public IEnumerable<string> remainder;
+
+            public int CompareTo(PartialAddress other) =>
+                Score().CompareTo(other.Score());
+
+            public int Score()
+            {
+                return Score(Address) + Score(City) + Score(State) + Score(Country)
+                     + Score(CountryCode) + Score(PostalCode) + remainder.Count(x => x == "\r\n")
+                     + (Country == C.CA && IsPostalCode(PostalCode.AsSpan()) ? 0 : 1)
+                     + (Country == C.US && IsZipCode(PostalCode.AsSpan()) ? 0 : 1)
+                     + (Country == C.CA || Country == C.US ? 0 : 1);
+            }
+
+            static int Score(Country? x) =>
+                x == null ? 1 : 0;
+
+            static int Score(string x) =>
+                string.IsNullOrEmpty(x) ? 1 : 0;
+        }
+
+        static PartialAddress PickBest(List<PartialAddress> shipTo)
+        {
+            if (shipTo.Count == 1)
+                return shipTo[0];
+            shipTo.Sort();
+            if (shipTo.Count == 0 || shipTo[0].Score() == shipTo[1].Score())
+                throw new Exception("No best pick!");
+            return shipTo[0];
+        }
+
+        static bool TryCountry(string x, out Country c)
+        {
+            var i = Array.BinarySearch(countryNames, x, StringComparer.OrdinalIgnoreCase);
+            if (i >= 0)
+            {
+                c = (Country)Enum.Parse(typeof(Country), countryNames[i]);
+                return true;
+            }
+            else
+            {
+                c = default;
+                return false;
+            }
+        }
+
+        static IEnumerable<PartialAddress> ParseCountries(IEnumerable<string> words)
+        {
+            int i = 0;
+            foreach (var x in words)
+            {
+                if (x != "\r\n" && TryCountry(x, out Country country))
+                    yield return new PartialAddress
+                    {
+                        Country = country,
+                        CountryCode = x,
+                        LastIndex = i,
+                        remainder = words,
+                    };
+                ++i;
+            }
+        }
+
+        static IEnumerable<PartialAddress> ParseProvincesGivenCountry(PartialAddress shipTo)
+        {
+            if (shipTo.Country == null || !provinces.TryGetValue(shipTo.Country.Value, out var states))
+                yield break;
+            int i = 0;
+            foreach (var x in shipTo.remainder)
+            {
+                if (x != "\r\n" && states.TryGetValue(x, out var prov)
+                    && (!string.IsNullOrEmpty(shipTo.CountryCode) || !Enum.TryParse(x, out Country c) || c != shipTo.Country))
+                    yield return FindCity(x, new PartialAddress
+                    {
+                        Country = shipTo.Country,
+                        CountryCode = shipTo.CountryCode,
+                        State = prov,
+                        LastIndex = i,
+                        remainder = shipTo.remainder,
+                    });
+                ++i;
+            }
+        }
+
+        static IEnumerable<PartialAddress> ParseProvinces(IEnumerable<string> words)
+        {
+            int i = 0;
+            foreach (var x in words)
+            {
+                if (x != "\r\n")
+                {
+                    foreach (var state in provinces)
+                    {
+                        if (state.Value.TryGetValue(x, out var prov))
+                            yield return FindCity(x, new PartialAddress
+                            {
+                                Country = state.Key,
+                                State = prov,
+                                LastIndex = i,
+                                remainder = words,
+                            });
+                    }
+                }
+                ++i;
+            }
+        }
+
+        static PartialAddress FindCity(string provinceCode, PartialAddress shipTo)
+        {
+            int lastNewLine = 0;
+            var postalCode = new Stack<string>();
+            shipTo.City = FindCity(shipTo.Country, shipTo.remainder.GetEnumerator(), 0, shipTo.LastIndex, ref lastNewLine, postalCode);
+            shipTo.PostalCode = string.Join(" ", postalCode);
+            var skip = postalCode.Concat(shipTo.City?.Split(sp) ?? Enumerable.Empty<string>()).Concat(shipTo.State.Split(sp));
+            var exclude = new HashSet<string>(skip)
+            {
+                provinceCode, shipTo.State, shipTo.CountryCode,
+            };
+            shipTo.remainder = shipTo.remainder.Where((x, i) => i < shipTo.LastIndex || !exclude.Contains(x));
+            shipTo.Address = shipTo.remainder.Aggregate(new StringBuilder(),
+                (acc, x) => x != "\r\n" ? acc.Append(x).Append(' ') :
+                            acc[acc.Length - 1] == '\n' ? acc :
+                                                          acc.AppendLine()).ToString();
+            return shipTo;
+        }
+
+        static string FindCity(Country? country, IEnumerator<string> ie, int i, int end, ref int lastNewLine, Stack<string> postalCode)
+        {
+            if (!ie.MoveNext())
+                return null;
+            else if (end <= i)
+            {
+                var part = ie.Current;
+                FindCity(country, ie, i + 1, end, ref lastNewLine, postalCode);
+                if (i != end && IsPostalCode(country, part.AsSpan()))
+                    postalCode.Push(part);
+                return null;
+            }
+            else if (i < end)
+            {
+                var part = ie.Current;
+                if (part == "\r\n")
+                    lastNewLine = i;
+                var rest = FindCity(country, ie, i + 1, end, ref lastNewLine, postalCode);
+                return end <= i || i <= lastNewLine ? rest :
+                       rest == null ? part :
+                                                      part + ' ' + rest;
+            }
+            else
+            {
+                return FindCity(country, ie, i + 1, end, ref lastNewLine, postalCode);
+            }
+        }
+
+        static bool IsPostalCode(Country? country, ReadOnlySpan<char> zip) =>
+            country == C.CA && IsPostalCode(zip)
+            || country == C.US && IsZipCode(zip);
+
+        static bool IsZipCode(ReadOnlySpan<char> zip)
+        {
+            var i = zip.IndexOf('-');
+            return i < 0 && int.TryParse(zip.ToString(), out var j)
+                || i >= 0 && int.TryParse(zip.Slice(0, i).ToString(), out j) && int.TryParse(zip.Slice(i + 1, zip.Length - i - 1).ToString(), out j);
+        }
+
+        static bool IsPostalCode(ReadOnlySpan<char> postalCode) =>
+            postalCode.Length == 3 && char.IsLetter(postalCode[0]) && char.IsDigit(postalCode[1]) && char.IsLetter(postalCode[2])
+            || postalCode.Length == 3 && char.IsDigit(postalCode[0]) && char.IsLetter(postalCode[1]) && char.IsDigit(postalCode[2])
+            || postalCode.Length == 6 && IsPostalCode(postalCode.Slice(0, 3)) && IsPostalCode(postalCode.Slice(4, 3));
+        #endregion
     }
 }
