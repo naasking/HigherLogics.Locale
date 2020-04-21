@@ -1,0 +1,169 @@
+﻿<#@ template language="C#" hostspecific="true" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Net" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extensions=".cs" #>
+<# List<string> countries; #>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.ComponentModel;
+
+namespace HigherLogics.Locale
+{
+	public enum Country : byte
+	{
+<# var abbrev = Countries(out countries); #>
+<# foreach (var x in countries) { #>
+<#      if (x != EnumName(x)) { #>
+        [Description("<#=x#>")]
+<#      } #>
+        <#=EnumName(x)#>,
+<# } #>
+<# foreach (var x in abbrev) { #>
+        <#=x.Key#> = <#=EnumName(x.Value)#>,
+<# } #>
+    }
+
+	public enum Currency
+	{
+<#
+SortedSet<string> currencies;
+var cc = Currencies(out currencies);
+#>
+<# foreach (var x in currencies) { #>
+        <#=x#>,
+<# } #>
+	}
+
+	public static partial class Locales
+	{
+        static readonly Country[][] currency2Country = new[]
+		{
+<# foreach (var x in cc) { #>
+<#     if (x.Key.Length == 3) { #>
+            new[] //Currency.<#=x.Key#>
+            {
+<#         foreach (var y in x.Value) { #>
+                Country.<#=y#>,
+<#         } #>
+            },
+<#     } #>
+<# } #>
+		};
+
+        static readonly Dictionary<Country, Currency> country2Currency = new Dictionary<Country, Currency>()
+		{
+<# foreach (var x in cc) { #>
+<#     if (x.Key.Length == 2) { #>
+            { Country.<#=x.Key#>, Locale.Currency.<#=x.Value.Single()#> },
+<#     } #>
+<# } #>
+		};
+
+	    /// <summary>The map of territories/states/provinces</summary>
+	    static readonly Dictionary<Country, Dictionary<string, string>> provinces = new Dictionary<Country, Dictionary<string, string>>()
+		{
+<# foreach (var country in Provinces()) { #>
+           { Country.<#=EnumName(country.Key)#>, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+               {
+<#	  foreach (var province in country.Value) { #>
+                   { "<#=province.Key#>", "<#=province.Value#>" },
+<#    } #>
+               }
+           },
+<# } #>
+        };
+    }
+	
+}
+<#+
+string EnumName(string name) {
+    return name.Replace(' ', '_').Replace('-', '_').Replace(".", "").Replace(",_", "_");
+}
+string Fetch(string url)
+{
+	using (var web = new WebClient())
+	{
+		return web.DownloadString(new Uri(url));
+	}
+}
+string Load(string file, string url)
+{
+    var root = this.Host.ResolvePath(".");
+	var path = Path.Combine(root, file);
+	if (File.Exists(path))
+		return File.ReadAllText(path);
+	var data = Fetch(url);
+	File.WriteAllText(path, data);
+	return data;
+}
+string[] Split(string x) =>
+	x.Split(new[] { '\r', '\n', ':', '"', '{', '}' }, StringSplitOptions.RemoveEmptyEntries);
+
+Dictionary<string, string> Countries(out List<string> names)
+{
+	var countries = Split(Load("countries.json", "http://country.io/names.json"));
+	var iso = Split(Load("iso2_3.json", "http://country.io/iso3.json"));
+	var map = new Dictionary<string, string>();
+	names = new List<string>();
+	// map ISO2 codes and case insensitive country name to normalized country name
+	for (int i = 0; i < countries.Length; i += 4)
+	{
+		names.Add(countries[i+2].Trim());
+		map[countries[i]] = countries[i+2].Trim();
+	}
+	// map ISO3 codes to normalized country name
+	for (int i = 0; i < iso.Length; i += 4)
+    {
+	    if (map.TryGetValue(iso[i], out var x))
+			map[iso[i + 2]] = x;
+	}
+	names.Sort();
+	return map;
+}
+Dictionary<string, Dictionary<string, string>> Provinces()
+{
+	//from: https://www.cbp.gov/document/guidance/international-stateprovince-codes
+	var provinces = File.ReadAllLines(this.Host.ResolvePath("provinces.csv"))
+						.Select(x => x.Split(new[] { ',' }, StringSplitOptions.None));
+	var countries = Countries(out var names);
+	var states = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+	foreach (var province in provinces)
+	{
+		var name = countries[province[0]];
+		if (!states.TryGetValue(name, out var country))
+			country = states[name] = new Dictionary<string, string>();
+		if (country.ContainsKey(province[1]))
+			throw new Exception($"{province[0]} has a duplicate province {province[1]}, {province[2]}.");
+		country.Add(province[1], province [2]);
+		if (!country.ContainsKey(province[2]))
+			country.Add(province[2], province [2]);
+	}
+	return states;
+}
+SortedDictionary<string, List<string>> Currencies(out SortedSet<string> currencies)
+{
+	var countries = Split(Load("currencies.json", "http://country.io/currency.json"));
+	currencies = new SortedSet<string>();
+    var list = new SortedDictionary<string, List<string>>();
+	for (int i = 0; i < countries.Length - 4; i += 4)
+	{
+		var c = countries[i+2].Trim();
+		if (string.IsNullOrEmpty(c) || c == ",")
+			continue;
+		currencies.Add(c);
+		if (!list.TryGetValue(c, out var d2c))
+			list[c] = d2c = new List<string>();
+		d2c.Add(countries[i].Trim());
+		if (!list.TryGetValue(countries[i], out var c2d))
+			list[countries[i]] = c2d = new List<string>();
+		c2d.Add(c);
+	}
+	return list;
+}
+#>
