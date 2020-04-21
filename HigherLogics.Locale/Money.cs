@@ -1,46 +1,46 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
 
-namespace Money
+namespace HigherLogics.Locale
 {
     /// <summary>
     /// A monetary value.
     /// </summary>
-    /// <typeparam name="TCurrency">The kind of the currency type.</typeparam>
+    /// <typeparam name="Currency">The kind of the currency type.</typeparam>
     /// <remarks>
     /// Inspired by: https://deque.blog/2017/08/17/a-study-of-4-money-class-designs-featuring-martin-fowler-kent-beck-and-ward-cunningham-implementations/
     /// </remarks>
-    public readonly struct Money<TCurrency> : IComparable<Money<TCurrency>>, IEquatable<Money<TCurrency>>
-        where TCurrency : IComparable<TCurrency>
+    public readonly struct Money : IComparable<Money>, IEquatable<Money>
     {
         // when sum == null, amount and currency are valid.
         // when sum != null, amount and currency are invalid.
         readonly decimal amount;
-        readonly TCurrency currency;
-        readonly Money<TCurrency>[] sum;
+        readonly Currency currency;
+        readonly List<Money> sum;
 
         /// <summary>
         /// Construct a simple monetary value.
         /// </summary>
         /// <param name="amount"></param>
         /// <param name="currency"></param>
-        public Money(decimal amount, TCurrency currency)
+        public Money(decimal amount, Currency currency)
         {
             this.amount = amount;
             this.currency = currency;
             this.sum = null;
         }
         
-        Money(params Money<TCurrency>[] sum)
+        Money(List<Money> sum)
         {
             Debug.Assert(sum.All(x => x.sum == null));
 
             // ensure all monetary values are ordered consistently so equality works
-            Array.Sort(sum);
+            sum.Sort();
             this.sum = sum;
             this.amount = 0;
-            this.currency = default(TCurrency);
+            this.currency = default(Currency);
         }
 
         /// <summary>
@@ -48,13 +48,34 @@ namespace Money
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public bool Equals(Money<TCurrency> other)
+        public bool Equals(Money other)
         {
             // monetary values must either be:
             // 1. simple values with equal amounts and equal currencies
             // 2. sums with the same sequence of sub-values, in the same order
             return sum == null && other.sum == null && amount == other.amount && currency.CompareTo(other.currency) == 0
-                || sum != null && other.sum != null && sum.Zip(other.sum, (x, y) => x.Equals(y)).All(x => x);
+                || sum != null && other.sum != null && PairwiseEqual(sum, other.sum);
+        }
+
+        static bool PairwiseEqual(List<Money> left, List<Money> right)
+        {
+            if (left.Count != right.Count)
+                return false;
+            for (int i = 0; i < left.Count; ++i)
+                if (!left[i].Equals(right[i]))
+                    return false;
+            return true;
+        }
+
+        static int PairwiseCompare(List<Money> left, List<Money> right)
+        {
+            for (int i = 0; i < Math.Min(left.Count, right.Count); ++i)
+            {
+                var x = left[i].CompareTo(right[i]);
+                if (x != 0)
+                    return x;
+            }
+            return 0;
         }
 
         /// <summary>
@@ -62,7 +83,7 @@ namespace Money
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public int CompareTo(Money<TCurrency> other)
+        public int CompareTo(Money other)
         {
             if (sum == null && other.sum == null)
             {
@@ -77,8 +98,7 @@ namespace Money
             {
                 // generates a lazy sequence of (0 | positive | negative), so we just return the first non-zero
                 // if no non-zero, this returns 0 anyway, which indicates equality
-                return sum.Zip(other.sum, (x, y) => x.CompareTo(y))
-                          .FirstOrDefault(x => x != 0);
+                return PairwiseCompare(sum, other.sum);
             }
         }
 
@@ -88,7 +108,7 @@ namespace Money
         /// <param name="target"></param>
         /// <param name="xchg"></param>
         /// <returns></returns>
-        public decimal Amount(TCurrency target, Func<TCurrency, TCurrency, decimal> xchg)
+        public decimal Amount(Currency target, Func<Currency, Currency, decimal> xchg)
         {
             if (xchg == null)
                 throw new ArgumentNullException("xchg");
@@ -102,11 +122,11 @@ namespace Money
         /// <param name="money"></param>
         /// <param name="constant"></param>
         /// <returns></returns>
-        public static Money<TCurrency> operator *(Money<TCurrency> money, decimal constant)
+        public static Money operator *(Money money, decimal constant)
         {
             return money.sum == null
-                 ? new Money<TCurrency>(money.amount * constant, money.currency)
-                 : new Money<TCurrency>(money.sum.Select(x => x * constant).ToArray());
+                 ? new Money(money.amount * constant, money.currency)
+                 : new Money(money.sum.Select(x => x * constant).ToList());
         }
 
         /// <summary>
@@ -115,7 +135,7 @@ namespace Money
         /// <param name="money"></param>
         /// <param name="constant"></param>
         /// <returns></returns>
-        public static Money<TCurrency> operator *(decimal constant, Money<TCurrency> money)
+        public static Money operator *(decimal constant, Money money)
         {
             return money * constant;
         }
@@ -126,22 +146,29 @@ namespace Money
         /// <param name="left"></param>
         /// <param name="right"></param>
         /// <returns></returns>
-        public static Money<TCurrency> operator +(Money<TCurrency> left, Money<TCurrency> right)
+        public static Money operator +(Money left, Money right)
         {
             // flatten any embedded sums to ensure top-level monetary expressions only contain flat arrays of values
-            return left.sum != null && right.sum != null ? new Money<TCurrency>(left.sum.Concat(right.sum).ToArray()):
-                   left.sum != null                      ? new Money<TCurrency>(left.sum.Append(right).ToArray()):
-                   right.sum != null                     ? new Money<TCurrency>(right.sum.Append(left).ToArray()):
-                                                           new Money<TCurrency>(left, right);
+            return left.sum != null && right.sum != null ? new Money(left.sum.Concat(right.sum).ToList()):
+                   left.sum != null                      ? new Money(Append(left.sum, right)):
+                   right.sum != null                     ? new Money(Append(right.sum, left)):
+                                                           new Money(new List<Money> { left, right });
         }
-        
+
+        static List<T> Append<T>(List<T> source, T item)
+        {
+            var list = new List<T>(source);
+            list.Add(item);
+            return list;
+        }
+
         /// <summary>
         /// Add two monetary values.
         /// </summary>
         /// <param name="left"></param>
         /// <param name="right"></param>
         /// <returns></returns>
-        public static Money<TCurrency> operator -(Money<TCurrency> left, Money<TCurrency> right)
+        public static Money operator -(Money left, Money right)
         {
             return left + -right;
         }
@@ -149,13 +176,13 @@ namespace Money
         /// <summary>
         /// Negate a monetary value.
         /// </summary>
-        /// <param name="left"></param>
+        /// <param name="money"></param>
         /// <returns></returns>
-        public static Money<TCurrency> operator -(Money<TCurrency> left)
+        public static Money operator -(Money money)
         {
-            return left.sum == null
-                 ? new Money<TCurrency>(-left.amount, left.currency)
-                 : new Money<TCurrency>(left.sum.Select(x => -x).ToArray());
+            return money.sum == null
+                 ? new Money(-money.amount, money.currency)
+                 : new Money(money.sum.Select(x => -x).ToList());
         }
     }
 }
