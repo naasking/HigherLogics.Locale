@@ -15,6 +15,22 @@ using System.ComponentModel;
 
 namespace HigherLogics.Locale
 {
+    /// <summary>The set of continents.</summary>
+	public enum Continents : byte
+    {
+<# foreach (var x in Continents().Reverse()) { #>
+<#    if (x.Key != x.Value) { #>
+        <#=x.Key#> = <#=EnumName(x.Value)#>,
+<#    } else { #>
+<#        if (x.Value != EnumName(x.Value)) { #>
+        [Description("<#=x.Value#>")]
+<#        } #>
+        <#=EnumName(x.Value)#>,
+<#     } #>
+<# } #>
+	}
+
+    /// <summary>The set of countries.</summary>
 	public enum Country : byte
 	{
 <# var abbrev = Countries(out countries); #>
@@ -29,6 +45,7 @@ namespace HigherLogics.Locale
 <# } #>
     }
 
+    /// <summary>The set of currencies.</summary>
 	public enum Currency
 	{
 <#
@@ -42,6 +59,7 @@ var cc = Currencies(out currencies);
 
 	public static partial class Locales
 	{
+	    /// <summary>The map of currencies to the set of countries that use them.</summary>
         static readonly Country[][] currency2Country = new[]
 		{
 <# foreach (var x in cc) { #>
@@ -56,6 +74,7 @@ var cc = Currencies(out currencies);
 <# } #>
 		};
 
+	    /// <summary>The map of countries to official currencies.</summary>
         static readonly Dictionary<Country, Currency> country2Currency = new Dictionary<Country, Currency>()
 		{
 <# foreach (var x in cc) { #>
@@ -165,5 +184,18 @@ SortedDictionary<string, List<string>> Currencies(out SortedSet<string> currenci
 		c2d.Add(c);
 	}
 	return list;
+}
+SortedDictionary<string, string> Continents()
+{
+	var continents = Load("continents.csv", "https://datahub.io/core/continent-codes/r/continent-codes.csv")
+		.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+	var map = new SortedDictionary<string, string>();
+	for (int i = 0; i < continents.Length; ++i)
+	{
+		var line = continents[i].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+        map.Add(line[0], line[1]);
+        map.Add(line[1], line[1]);
+	}
+	return map;
 }
 #>

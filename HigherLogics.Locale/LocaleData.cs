@@ -6,6 +6,30 @@ using System.ComponentModel;
 
 namespace HigherLogics.Locale
 {
+    /// <summary>The set of continents.</summary>
+	public enum Continents : byte
+    {
+        [Description("South America")]
+        South_America,
+        SA = South_America,
+        Oceania,
+        OC = Oceania,
+        [Description("North America")]
+        North_America,
+        Name,
+        NA = North_America,
+        Europe,
+        EU = Europe,
+        Code = Name,
+        Asia,
+        AS = Asia,
+        Antarctica,
+        AN = Antarctica,
+        Africa,
+        AF = Africa,
+	}
+
+    /// <summary>The set of countries.</summary>
 	public enum Country : byte
 	{
         Afghanistan,
@@ -830,6 +854,7 @@ namespace HigherLogics.Locale
         MOZ = Mozambique,
     }
 
+    /// <summary>The set of currencies.</summary>
 	public enum Currency
 	{
         AED,
@@ -984,6 +1009,7 @@ namespace HigherLogics.Locale
 
 	public static partial class Locales
 	{
+	    /// <summary>The map of currencies to the set of countries that use them.</summary>
         static readonly Country[][] currency2Country = new[]
 		{
             new[] //Currency.AED
@@ -1668,6 +1694,7 @@ namespace HigherLogics.Locale
             },
 		};
 
+	    /// <summary>The map of countries to official currencies.</summary>
         static readonly Dictionary<Country, Currency> country2Currency = new Dictionary<Country, Currency>()
 		{
             { Country.AD, Locale.Currency.EUR },
