@@ -195,6 +195,14 @@ namespace HigherLogics.Locale
                 arr[i] = values[i] / constant;
             return arr;
         }
+
+        static Fixed<Currency>[] Negate(Fixed<Currency>[] values, decimal constant)
+        {
+            var arr = new Fixed<Currency>[values.Length];
+            for (int i = 0; i < arr.Length; ++i)
+                arr[i] = -values[i];
+            return arr;
+        }
         #endregion
     }
 }

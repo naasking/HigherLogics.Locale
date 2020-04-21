@@ -16,14 +16,25 @@ namespace HigherLogics
             Value = value;
             Units = units;
         }
-
+        /// <summary>
+        /// The numerical value.
+        /// </summary>
         public decimal Value { get; }
 
+        /// <summary>
+        /// The units associated with this number.
+        /// </summary>
         public T Units { get; }
 
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
         public bool Equals(Fixed<T> other) =>
             Value == other.Value && EqualityComparer<T>.Default.Equals(Units, other.Units);
 
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
         public int CompareTo(Fixed<T> other)
         {
             var x = Comparer<T>.Default.Compare(Units, other.Units);
@@ -62,8 +73,11 @@ namespace HigherLogics
 
         public static Fixed<T> operator +(Fixed<T> lhs, Fixed<T> rhs) =>
             new Fixed<T>(lhs.Value + rhs.Value, lhs.Units);
-        
+
         public static Fixed<T> operator -(Fixed<T> lhs, Fixed<T> rhs) =>
             new Fixed<T>(lhs.Value - rhs.Value, lhs.Units);
+
+        public static Fixed<T> operator -(Fixed<T> x) =>
+            new Fixed<T>(-x.Value, x.Units);
     }
 }
