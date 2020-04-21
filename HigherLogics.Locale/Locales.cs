@@ -51,27 +51,41 @@ namespace HigherLogics.Locale
         #region PostalAddress parsing
         public static PostalAddress ParseAddress(string address)
         {
+            // 1. split the address into lines, and then split each line into words
+            // 2. check the words against the database of countries and states and return the set of all
+            //    matches as a parse forest
+            // 3. given each entry, try to extract the city and postal code
+            // 4. score each 
             var words = NewLines(address.Split(nl, StringSplitOptions.RemoveEmptyEntries))
                           .SelectMany(x => x.Split(sp, StringSplitOptions.RemoveEmptyEntries))
                           .ToList();
+            // country is optional, so also search by state first and return all countries with states
+            // that match, and merge them all into a set of options
             var countries = ParseCountries(words);
-            // country is optional, so also search by state first and return all countries that match
             var shipTo = countries.SelectMany(x => ParseProvincesGivenCountry(x))
                                   .Concat(ParseProvinces(words))
                                   .ToList();
-            var best = PickBest(shipTo);
+            var match = BestMatch(shipTo);
+            var lines = match.AddressTo.Split(nl, StringSplitOptions.RemoveEmptyEntries);
             return new PostalAddress
             {
-                StreetAddress = best.Address,
-                Country = best.Country.Value,
-                State = best.State,
-                Municipality = best.City,
-                PostalCode = best.PostalCode,
+                StreetAddress = string.Join("\r\n", lines.Skip(1)),
+                AddressTo = lines[0].Trim(),
+                Country = match.Country.Value,
+                State = match.State,
+                Municipality = match.City.Trim(),
+                PostalCode = match.PostalCode,
             };
         }
 
-        //FIXME: I should add better scoring, where I consider the case sensitivity of various identifiers.
-        //Perhaps case insensitivity is a fallback, and everything should be case sensitive by default.
+        //FIXME: I should improve scoring:
+        // 1. Case sensitivity is important, ie. "OF" should be given a higher score than "of".
+        //    Perhaps case insensitivity is a fallback if no matches, and everything should be
+        //    case sensitive by default.
+        // 2. Extend the postal code matching to other countries.
+        //FIXME: this is a very suboptimal parser that performs a lot of allocation. I can
+        //definitely improve this using a proper parser combinator framework.
+        //FIXME: 
 
         static char[] nl = new[] { '\r', '\n' };
         static char[] sp = new[] { ' ', ',' };
@@ -86,9 +100,9 @@ namespace HigherLogics.Locale
             }
         }
 
-        public class PartialAddress : IComparable<PartialAddress>
+        class PartialAddress : IComparable<PartialAddress>
         {
-            public string Address;
+            public string AddressTo;
             public string City;
             public string State;
             public Country? Country;
@@ -102,7 +116,7 @@ namespace HigherLogics.Locale
 
             public int Score()
             {
-                return Score(Address) + Score(City) + Score(State) + Score(Country)
+                return Score(AddressTo) + Score(City) + Score(State) + Score(Country)
                      + Score(CountryCode) + Score(PostalCode) + remainder.Count(x => x == "\r\n")
                      + (Country == C.CA && IsPostalCode(PostalCode.AsSpan()) ? 0 : 1)
                      + (Country == C.US && IsZipCode(PostalCode.AsSpan()) ? 0 : 1)
@@ -116,7 +130,7 @@ namespace HigherLogics.Locale
                 string.IsNullOrEmpty(x) ? 1 : 0;
         }
 
-        static PartialAddress PickBest(List<PartialAddress> shipTo)
+        static PartialAddress BestMatch(List<PartialAddress> shipTo)
         {
             if (shipTo.Count == 1)
                 return shipTo[0];
@@ -214,9 +228,9 @@ namespace HigherLogics.Locale
                 provinceCode, shipTo.State, shipTo.CountryCode,
             };
             shipTo.remainder = shipTo.remainder.Where((x, i) => i < shipTo.LastIndex || !exclude.Contains(x));
-            shipTo.Address = shipTo.remainder.Aggregate(new StringBuilder(),
-                (acc, x) => x != "\r\n" ? acc.Append(x).Append(' ') :
-                            acc[acc.Length - 1] == '\n' ? acc :
+            shipTo.AddressTo = shipTo.remainder.Aggregate(new StringBuilder(),
+                (acc, x) => x != "\r\n" ? acc.Append(x).Append(' '):
+                            acc[acc.Length - 1] == '\n' ? acc:
                                                           acc.AppendLine()).ToString();
             return shipTo;
         }
@@ -239,8 +253,8 @@ namespace HigherLogics.Locale
                 if (part == "\r\n")
                     lastNewLine = i;
                 var rest = FindCity(country, ie, i + 1, end, ref lastNewLine, postalCode);
-                return end <= i || i <= lastNewLine ? rest :
-                       rest == null ? part :
+                return end <= i || i <= lastNewLine ? rest:
+                       rest == null                 ? part:
                                                       part + ' ' + rest;
             }
             else
