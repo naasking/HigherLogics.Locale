@@ -47,21 +47,56 @@ namespace HigherLogics.Locale
         public int CompareTo(Money other) =>
             values.Zip(other.values, ValueTuple.Create).Select(x => x.Item1.CompareTo(x.Item2)).First(x => x != 0);
 
+        /// <summary>
+        /// Add two values.
+        /// </summary>
+        /// <param name="lhs">The left hand value.</param>
+        /// <param name="rhs">The right hand value.</param>
+        /// <returns>The sum of the given values.</returns>
         public static Money operator +(Money lhs, Money rhs) =>
             new Money(Add(lhs.values, rhs.values));
 
+        /// <summary>
+        /// Subtract two values.
+        /// </summary>
+        /// <param name="lhs">The left hand value.</param>
+        /// <param name="rhs">The right hand value.</param>
+        /// <returns>The subtraction of the given values.</returns>
         public static Money operator -(Money lhs, Money rhs) =>
             new Money(Subtract(lhs.values, rhs.values));
 
+        /// <summary>
+        /// Multiply two values.
+        /// </summary>
+        /// <param name="lhs">The left hand value.</param>
+        /// <param name="rhs">The right hand value.</param>
+        /// <returns>The multiplication of the given values.</returns>
         public static Money operator *(Money lhs, decimal rhs) =>
             new Money(Multiply(lhs.values, rhs));
 
+        /// <summary>
+        /// Multiply two values.
+        /// </summary>
+        /// <param name="lhs">The left hand value.</param>
+        /// <param name="rhs">The right hand value.</param>
+        /// <returns>The multiplication of the given values.</returns>
         public static Money operator *(decimal lhs, Money rhs) =>
             new Money(Multiply(rhs.values, lhs));
 
+        /// <summary>
+        /// Divide two values.
+        /// </summary>
+        /// <param name="lhs">The left hand value.</param>
+        /// <param name="rhs">The right hand value.</param>
+        /// <returns>The division of the given values.</returns>
         public static Money operator /(Money lhs, decimal constant) =>
             new Money(Divide(lhs.values, constant));
 
+        /// <summary>
+        /// Negate a value.
+        /// </summary>
+        /// <param name="money">The value to negate.</param>
+        /// <returns>The negation of the given values.</returns>
         public static Money operator -(Money money) =>
             -1 * money;
 
