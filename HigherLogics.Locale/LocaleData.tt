@@ -170,7 +170,7 @@ SortedDictionary<string, List<string>> Currencies(out SortedSet<string> currenci
 	var countries = Split(Load("currencies.json", "http://country.io/currency.json"));
 	currencies = new SortedSet<string>();
     var list = new SortedDictionary<string, List<string>>();
-	for (int i = 0; i < countries.Length - 4; i += 4)
+	for (int i = 0; i < countries.Length - 2; i += 4)
 	{
 		var c = countries[i+2].Trim();
 		if (string.IsNullOrEmpty(c) || c == ",")
