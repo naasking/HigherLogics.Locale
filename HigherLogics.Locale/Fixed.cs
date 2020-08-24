@@ -9,8 +9,13 @@ namespace HigherLogics
     /// </summary>
     /// <typeparam name="T">The units for this number.</typeparam>
     readonly struct Fixed<T> : IEquatable<Fixed<T>>, IComparable<Fixed<T>>
-        where T : struct
+        where T : struct, Enum
     {
+        /// <summary>
+        /// Construct a new fixed width decimal value.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="units"></param>
         public Fixed(decimal value, T units)
         {
             Value = value;
