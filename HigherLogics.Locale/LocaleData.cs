@@ -855,7 +855,7 @@ namespace HigherLogics.Locale
     }
 
     /// <summary>The set of currencies.</summary>
-	public enum Currency
+	public enum Currency : byte
 	{
         AED,
         AFN,

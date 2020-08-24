@@ -46,7 +46,7 @@ namespace HigherLogics.Locale
     }
 
     /// <summary>The set of currencies.</summary>
-	public enum Currency
+	public enum Currency : byte
 	{
 <#
 SortedSet<string> currencies;
