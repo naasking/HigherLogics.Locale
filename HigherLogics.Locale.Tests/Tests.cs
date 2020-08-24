@@ -39,6 +39,11 @@ Sister Veronical or Sister Barbara 905-822-5298")]
         }
 
         [Theory]
+        [InlineData(Country.CA, "Ontario", "Burlington", "L7N3P1", @"Russell Hendrix Foodservice Equipment
+c/oAssumption CSS
+3230 Woodware Avenue
+Burlington, ON, CA
+L7N3P1")]
         [InlineData(Country.CA, "Ontario", "Cavon", "L0A 1C0", @"MCC Fire Equipment
 961 Meadow Lane
 Cavon, ON L0A 1C0
