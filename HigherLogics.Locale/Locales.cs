@@ -277,7 +277,7 @@ namespace HigherLogics.Locale
         static bool IsPostalCode(ReadOnlySpan<char> postalCode) =>
             postalCode.Length == 3 && char.IsLetter(postalCode[0]) && char.IsDigit(postalCode[1]) && char.IsLetter(postalCode[2])
             || postalCode.Length == 3 && char.IsDigit(postalCode[0]) && char.IsLetter(postalCode[1]) && char.IsDigit(postalCode[2])
-            || postalCode.Length == 6 && IsPostalCode(postalCode.Slice(0, 3)) && IsPostalCode(postalCode.Slice(4, 3));
+            || postalCode.Length == 6 && IsPostalCode(postalCode.Slice(0, 3)) && IsPostalCode(postalCode.Slice(3, 3));
         #endregion
     }
 }
