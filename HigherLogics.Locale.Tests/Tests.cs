@@ -102,6 +102,11 @@ Attn: Dave Nagy 313-255-0053")]
 Redford MI 48240-1480
 
 Attn: Dave Nagy 313-255-0053")]
+        [InlineData(Country.US, "Washington", "Bellvue", "98004", @"Tokyo Japanese Steakhouse
+Suite 108
+909 112th Avenue NE
+Bellvue, WA, US
+98004")]
         static void FullPostalAddresses(Country country, string state, string city, string postalCode, string addr)
         {
             var post = Locales.ParseAddress(addr);
