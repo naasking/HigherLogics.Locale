@@ -128,6 +128,11 @@ namespace HigherLogics.Locale
 
             static int Score(string x) =>
                 string.IsNullOrEmpty(x) ? 1 : 0;
+            
+            public override string ToString() =>
+$@"{AddressTo}
+{City}, {State}, {Country}
+{PostalCode}";
         }
 
         static PartialAddress BestMatch(List<PartialAddress> shipTo)
@@ -220,14 +225,26 @@ namespace HigherLogics.Locale
         {
             int lastNewLine = 0;
             var postalCode = new Stack<string>();
-            shipTo.City = FindCity(shipTo.Country, shipTo.remainder.GetEnumerator(), 0, shipTo.LastIndex, ref lastNewLine, postalCode);
+            (shipTo.City, shipTo.LastIndex) = FindCity(shipTo.Country, shipTo.remainder.GetEnumerator(), 0, shipTo.LastIndex, ref lastNewLine, postalCode);
             shipTo.PostalCode = string.Join(" ", postalCode);
             var skip = postalCode.Concat(shipTo.City?.Split(sp) ?? Enumerable.Empty<string>()).Concat(shipTo.State.Split(sp));
             var exclude = new HashSet<string>(skip)
             {
-                provinceCode, shipTo.State, shipTo.CountryCode,
+                provinceCode, shipTo.State, shipTo.CountryCode
             };
-            shipTo.remainder = shipTo.remainder.Where((x, i) => i < shipTo.LastIndex || !exclude.Contains(x));
+            if (!string.IsNullOrEmpty(shipTo.City))
+                exclude.Add(shipTo.City);
+            // collapse sequences of newlines into a single newline
+            // because this indicates that the whole line was consumed,
+            // then remove all recognized words from the sequence
+            var items = shipTo.remainder.ToList();
+            for (var i = items.Count - 1; i >= 0; --i)
+            {
+                var x = items[i];
+                if (i >= shipTo.LastIndex && exclude.Contains(x) || (x == "\r\n" && i < items.Count - 1 && items[i + 1] == x))
+                    items.RemoveAt(i);
+            }
+            shipTo.remainder = items;
             shipTo.AddressTo = shipTo.remainder.Aggregate(new StringBuilder(),
                 (acc, x) => x != "\r\n" ? acc.Append(x).Append(' '):
                             acc[acc.Length - 1] == '\n' ? acc:
@@ -235,27 +252,27 @@ namespace HigherLogics.Locale
             return shipTo;
         }
 
-        static string FindCity(Country? country, IEnumerator<string> ie, int i, int end, ref int lastNewLine, Stack<string> postalCode)
+        static (string, int) FindCity(Country? country, IEnumerator<string> ie, int i, int end, ref int lastNewLine, Stack<string> postalCode)
         {
             if (!ie.MoveNext())
-                return null;
+                return (null, 0);
             else if (end <= i)
             {
                 var part = ie.Current;
                 FindCity(country, ie, i + 1, end, ref lastNewLine, postalCode);
                 if (i != end && IsPostalCode(country, part.AsSpan()))
                     postalCode.Push(part);
-                return null;
+                return (null, 0);
             }
             else if (i < end)
             {
                 var part = ie.Current;
                 if (part == "\r\n")
                     lastNewLine = i;
-                var rest = FindCity(country, ie, i + 1, end, ref lastNewLine, postalCode);
-                return end <= i || i <= lastNewLine ? rest:
-                       rest == null                 ? part:
-                                                      part + ' ' + rest;
+                var (rest, j) = FindCity(country, ie, i + 1, end, ref lastNewLine, postalCode);
+                return end <= i || i <= lastNewLine ? (rest, j):
+                       rest == null                 ? (part, i):
+                                                      (part + ' ' + rest, j);
             }
             else
             {
