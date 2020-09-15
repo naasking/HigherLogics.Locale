@@ -8,7 +8,7 @@
     <Authors>Sandro Magi</Authors>
     <Description>Locale-specific information, like countries, states, postal addresses, phone numbers, etc.</Description>
     <Copyright>Sandro Magi 2020</Copyright>
-    <PackageLicenseExpression>LGPL2.1</PackageLicenseExpression>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
