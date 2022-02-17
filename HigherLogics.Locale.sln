@@ -5,7 +5,9 @@ VisualStudioVersion = 16.0.30011.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HigherLogics.Locale", "HigherLogics.Locale\HigherLogics.Locale.csproj", "{470CC022-5A52-4EF9-B311-D3E318FA0619}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HigherLogics.Locale.Tests", "HigherLogics.Locale.Tests\HigherLogics.Locale.Tests.csproj", "{A5A59B85-8D8A-41E9-9C90-4FF8078E962C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HigherLogics.Locale.Tests", "HigherLogics.Locale.Tests\HigherLogics.Locale.Tests.csproj", "{A5A59B85-8D8A-41E9-9C90-4FF8078E962C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LocaleGenerator", "LocaleGenerator\LocaleGenerator.csproj", "{71D1E871-7960-4FA6-853D-98765068C41C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{A5A59B85-8D8A-41E9-9C90-4FF8078E962C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5A59B85-8D8A-41E9-9C90-4FF8078E962C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5A59B85-8D8A-41E9-9C90-4FF8078E962C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71D1E871-7960-4FA6-853D-98765068C41C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71D1E871-7960-4FA6-853D-98765068C41C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71D1E871-7960-4FA6-853D-98765068C41C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71D1E871-7960-4FA6-853D-98765068C41C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

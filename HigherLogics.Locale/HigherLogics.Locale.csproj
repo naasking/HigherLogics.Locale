@@ -1,9 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net47</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.0.0-RC1</Version>
+    <Version>1.0.0-RC3</Version>
     <Company>Higher Logics</Company>
     <Authors>Sandro Magi</Authors>
     <Description>Locale-specific information, like countries, states, postal addresses, phone numbers, etc.</Description>
@@ -16,26 +16,34 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="LocaleData.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="LocaleData.tt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis" Version="3.11.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="system.Memory" Version="4.5.4" />
     <PackageReference Include="system.valuetuple" Version="4.5.0" />
   </ItemGroup>
-
+  
   <ItemGroup>
-    <None Update="LocaleData.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>LocaleData.cs</LastGenOutput>
-    </None>
+    <ProjectReference Include="..\LocaleGenerator\LocaleGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
   </ItemGroup>
-
+  
+  <PropertyGroup>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+  
   <ItemGroup>
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="LocaleData.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LocaleData.tt</DependentUpon>
-    </Compile>
   </ItemGroup>
 </Project>
