@@ -1,21 +1,16 @@
 # HigherLogics.Locale
 
-This project is intended to provide general business functionality, like:
+This project is intended to provide some general business functionality, like:
 
  * mailing address parsing and validation
  * a currency-typed Money abstraction
 
-The current project name is a bit of a misnomer. It should probably be something
-more like HigherLogics.Sales or HigherLogics.Enterprise (accounting?).
+The current project name is preliminary and will not reflect the final name
+or organization of these abstractions.
 
 # Future Work
 
- * maybe make country, currency, continents, and their associations dynamically loaded
-   so we don't need to rebuild for any changes?
+ * make country, currency, continents, and their associations dynamically loaded
+   so we don't need to rebuild for any changes
  * Fixed\<T\> should reference HigherLogics.Algebra
- * An invoice type that abstracts over an invoice via
-   Func\<Invoice, Money, LineItem\>, which can provide context
- * exchange rate conversions (online? offline? manual?)
- * BillOfMaterials?
  * extensions for mailing address validation to verify it via an online source?
- * payment processing? maybe under HigherLogics.Enterprise.Payments/Sales?
