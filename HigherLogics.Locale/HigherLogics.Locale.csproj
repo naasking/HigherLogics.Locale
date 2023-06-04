@@ -3,12 +3,12 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net47</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.0.0-RC3</Version>
+    <Version>1.0.0-RC4</Version>
     <Company>Higher Logics</Company>
     <Authors>Sandro Magi</Authors>
-    <Description>Locale-specific information, like countries, states, postal addresses, phone numbers, etc.</Description>
+    <Description>Locale-specific functionality, like countries, states, postal addresses, phone numbers, etc.</Description>
     <Copyright>Sandro Magi 2020</Copyright>
-    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
@@ -41,6 +41,9 @@
   <PropertyGroup>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    <PackageProjectUrl>https://github.com/naasking/HigherLogics.Locale</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/naasking/HigherLogics.Locale</RepositoryUrl>
+    <PackageTags>business, mailing-address</PackageTags>
   </PropertyGroup>
   
   <ItemGroup>
